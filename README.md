@@ -2,9 +2,11 @@
 
 Türkiye'deki doktor bilgilerini (ad, soyad, unvan, branş, şehir, çalıştığı hastane) **10 farklı sağlık platformundan** otomatik olarak tarayan, çapraz doğrulama yapan ve güvenilirlik puanı hesaplayan bir web uygulamasıdır.
 
+dl
 ## 🎯 Proje Amacı
 
 Kullanıcılar tarafından girilen sahte veya yetkisiz doktor profillerini tespit etmek amacıyla geliştirilmiş bir doğrulama sistemidir. Kullanıcılar bir doktorun bilgilerini sisteme girer; sistem bu bilgileri birden fazla kaynakta arayarak doğrular ve bir güvenilirlik skoru üretir.
+
 
 ## ✨ Özellikler
 
@@ -13,6 +15,7 @@ Kullanıcılar tarafından girilen sahte veya yetkisiz doktor profillerini tespi
 - **Admin Paneli** — Doktor onaylama, reddetme, düzenleme ve hastane yönetimi
 - **Güvenli Kimlik Doğrulama** — BCrypt ile şifrelenmiş oturum yönetimi
 - **Şehir Bazlı Filtreleme** — Doktorları ve hastaneleri şehre göre filtreleme
+
 
 ## 🛠️ Teknolojiler
 
@@ -23,6 +26,7 @@ Kullanıcılar tarafından girilen sahte veya yetkisiz doktor profillerini tespi
 | Frontend | HTML, CSS, JavaScript |
 | Web Scraping | BeautifulSoup4, Requests |
 | Güvenlik | Flask-Bcrypt, Session Auth |
+
 
 ## 📁 Proje Yapısı
 
@@ -39,6 +43,7 @@ Kullanıcılar tarafından girilen sahte veya yetkisiz doktor profillerini tespi
 ├── templates/          # HTML şablonları (Kullanıcı & Admin arayüzü)
 └── static/             # CSS dosyaları
 ```
+
 
 ## 🚀 Kurulum
 
@@ -64,6 +69,7 @@ python app.py
 
 Uygulama varsayılan olarak `http://localhost:5000` adresinde çalışır.
 
+
 ## 📸 Ekran Görüntüleri
 
 <table style="width: 100%; table-layout: fixed;">
@@ -79,11 +85,14 @@ Uygulama varsayılan olarak `http://localhost:5000` adresinde çalışır.
   </tr>
 </table>
 
+
 ## 📄 Lisans
 
 Bu proje [MIT Lisansı](LICENSE) ile lisanslanmıştır.
+
 
 ## 👤 Geliştirici
 
 **Muhammet Algan**
 - GitHub: [@Muhammet-Algan](https://github.com/Muhammet-Algan)
+- LinkedIn: [Muhammet Algan](https://www.linkedin.com/in/muhammet-al%C4%9Fan/)
