@@ -66,15 +66,15 @@ Uygulama varsayılan olarak `http://localhost:5000` adresinde çalışır.
 
 ## 📸 Ekran Görüntüleri
 
-<table style="width: 100%;">
+<table style="width: 100%; table-layout: fixed;">
   <tr>
-    <td style="width: 50%; text-align: center;">
+    <td style="width: 35%; text-align: center; vertical-align: top;">
       <p><b>Kullanıcı Formu</b></p>
-      <img src="static/images/form_mockup.png" width="400" alt="Yeni Doktor Bildir">
+      <img src="static/images/form_mockup.png" style="width: 100%; height: auto; max-height: 250px; object-fit: contain;" alt="Yeni Doktor Bildir">
     </td>
-    <td style="width: 50%; text-align: center;">
+    <td style="width: 65%; text-align: center; vertical-align: top;">
       <p><b>Yönetim Paneli</b></p>
-      <img src="static/images/admin_mockup.png" width="400" alt="Admin Paneli">
+      <img src="static/images/admin_mockup.png" style="width: 100%; height: auto;" alt="Admin Paneli">
     </td>
   </tr>
 </table>
