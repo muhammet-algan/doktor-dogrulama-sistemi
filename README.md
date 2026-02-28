@@ -66,16 +66,18 @@ Uygulama varsayılan olarak `http://localhost:5000` adresinde çalışır.
 
 ## 📸 Ekran Görüntüleri
 
-Sistemin tasarım dilini ve işlevselliğini yansıtan örnek arayüz taslakları:
-
-### Kullanıcı Formu
-![Yeni Doktor Bildir](static/images/form_mockup.png)
-
-### Yönetim Paneli
-![Admin Paneli](static/images/admin_mockup.png)
-
-> [!NOTE]
-> Yukarıdaki görseller temsilidir ve uygulamanın tasarım standartlarını yansıtmak amacıyla hazırlanmıştır.
+<table style="width: 100%;">
+  <tr>
+    <td style="width: 50%; text-align: center;">
+      <p><b>Kullanıcı Formu</b></p>
+      <img src="static/images/form_mockup.png" width="400" alt="Yeni Doktor Bildir">
+    </td>
+    <td style="width: 50%; text-align: center;">
+      <p><b>Yönetim Paneli</b></p>
+      <img src="static/images/admin_mockup.png" width="400" alt="Admin Paneli">
+    </td>
+  </tr>
+</table>
 
 ## 📄 Lisans
 
