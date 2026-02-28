@@ -1,10 +1,10 @@
-# Doktor Doğrulama Sistemi 🏥
+# Doktor Doğrulama Sistemi 
 
-Türkiye'deki doktor bilgilerini **10 farklı sağlık platformundan** otomatik olarak tarayan, çapraz doğrulama yapan ve güvenilirlik puanı hesaplayan bir web uygulamasıdır.
+Türkiye'deki doktor bilgilerini (ad, soyad, unvan, branş, şehir, çalıştığı hastane) **10 farklı sağlık platformundan** otomatik olarak tarayan, çapraz doğrulama yapan ve güvenilirlik puanı hesaplayan bir web uygulamasıdır.
 
 ## 🎯 Proje Amacı
 
-Sahte veya yetkisiz doktor profillerini tespit etmek amacıyla geliştirilmiş bir doğrulama sistemidir. Kullanıcılar bir doktorun bilgilerini sisteme girer; sistem bu bilgileri birden fazla kaynakta arayarak doğrular ve bir güvenilirlik skoru üretir.
+Kullanıcılar tarafından girilen sahte veya yetkisiz doktor profillerini tespit etmek amacıyla geliştirilmiş bir doğrulama sistemidir. Kullanıcılar bir doktorun bilgilerini sisteme girer; sistem bu bilgileri birden fazla kaynakta arayarak doğrular ve bir güvenilirlik skoru üretir.
 
 ## ✨ Özellikler
 
@@ -66,7 +66,16 @@ Uygulama varsayılan olarak `http://localhost:5000` adresinde çalışır.
 
 ## 📸 Ekran Görüntüleri
 
-> Yakında eklenecek.
+Sistemin tasarım dilini ve işlevselliğini yansıtan örnek arayüz taslakları:
+
+### Kullanıcı Formu
+![Yeni Doktor Bildir](static/images/form_mockup.png)
+
+### Yönetim Paneli
+![Admin Paneli](static/images/admin_mockup.png)
+
+> [!NOTE]
+> Yukarıdaki görseller temsilidir ve uygulamanın tasarım standartlarını yansıtmak amacıyla hazırlanmıştır.
 
 ## 📄 Lisans
 
