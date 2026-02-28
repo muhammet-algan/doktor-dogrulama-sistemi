@@ -2,7 +2,7 @@
 
 Türkiye'deki doktor bilgilerini (ad, soyad, unvan, branş, şehir, çalıştığı hastane) **10 farklı sağlık platformundan** otomatik olarak tarayan, çapraz doğrulama yapan ve güvenilirlik puanı hesaplayan bir web uygulamasıdır.
 
-dl
+
 ## 🎯 Proje Amacı
 
 Kullanıcılar tarafından girilen sahte veya yetkisiz doktor profillerini tespit etmek amacıyla geliştirilmiş bir doğrulama sistemidir. Kullanıcılar bir doktorun bilgilerini sisteme girer; sistem bu bilgileri birden fazla kaynakta arayarak doğrular ve bir güvenilirlik skoru üretir.
