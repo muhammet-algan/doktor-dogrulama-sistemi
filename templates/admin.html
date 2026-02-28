@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="tr">
+<!--
+YÖNETİM PANELİ (admin.html)
+--------------------------
+Sistem yöneticisinin doktor taleplerini onayladığı, sildiği ve güncellediği ana kontrol merkezidir.
+- Tab tabanlı navigasyon (Dashboard, Talepler, Kayıtlılar vb.)
+- Detaylı puanlama görünümleri.
+- Şifre yönetimi ve arama özellikleri içerir.
+-->
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yönetim Paneli</title>
+    <link rel="stylesheet" href="/static/css/admin.css">
+</head>
+
+<body>
+    <div class="admin-layout">
+        <!-- SOL MENÜ (Sidebar) -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h1>🏥 YÖNETİM PANELİ</h1>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" onclick="switchTab('home')">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Anasayfa</span>
+                </a>
+                <button class="nav-item add-doctor-btn" onclick="openAddDoctorModal()">
+                    <span class="nav-icon">➕</span>
+                    <span class="nav-text">Doktor Ekle</span>
+                </button>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Site Yönetimi</div>
+                    <a href="#" class="nav-item" onclick="switchTab('pending')">
+                        <span class="nav-icon">📋</span>
+                        <span class="nav-text">Yeni Doktor Talebi</span>
+                    </a>
+                    <a href="#" class="nav-item" onclick="switchTab('updates')">
+                        <span class="nav-icon">✏️</span>
+                        <span class="nav-text">Bilgi Değişikliği Talebi</span>
+                    </a>
+                    <a href="#" class="nav-item" onclick="switchTab('registered')">
+                        <span class="nav-icon">👨‍⚕️</span>
+                        <span class="nav-text">Kayıtlı Doktorlar</span>
+                    </a>
+                    <a href="#" class="nav-item" onclick="switchTab('hospitals')">
+                        <span class="nav-icon">🏥</span>
+                        <span class="nav-text">Kayıtlı Hastaneler</span>
+                    </a>
+                </div>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="nav-item settings" onclick="openPasswordModal()">
+                    <span class="nav-icon">🔐</span>
+                    <span class="nav-text">Şifremi Değiştir</span>
+                </button>
+                <button class="nav-item logout" onclick="logout()">
+                    <span class="nav-icon">🚪</span>
+                    <span class="nav-text">Çıkış Yap</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- ANA İÇERİK ALANI -->
+        <div class="main-content">
+            <!-- SEKME 0: DASHBOARD (Özet Bilgiler) -->
+            <div id="homeTab" class="content-section active">
+                <div class="content-header">
+                    <h2>Genel Durumu Görüntüle 📶</h2>
+                </div>
+                <div class="content-body">
+                    <!-- Mevcut hızlı erişim kartları -->
+                    <div class="dashboard-grid">
+                        <div class="dashboard-card" onclick="switchTab('pending')">
+                            <div class="dashboard-icon">📋</div>
+                            <div class="dashboard-info">
+                                <span class="dashboard-value" id="pendingCount">0</span>
+                                <span class="dashboard-label">Bekleyen Talep</span>
+                            </div>
+                        </div>
+                        <div class="dashboard-card" onclick="switchTab('updates')">
+                            <div class="dashboard-icon">✏️</div>
+                            <div class="dashboard-info">
+                                <span class="dashboard-value" id="updateCount">0</span>
+                                <span class="dashboard-label">Değişiklik Talebi</span>
+                            </div>
+                        </div>
+                        <div class="dashboard-card" onclick="switchTab('registered')">
+                            <div class="dashboard-icon">👨‍⚕️</div>
+                            <div class="dashboard-info">
+                                <span class="dashboard-value" id="registeredCount">0</span>
+                                <span class="dashboard-label">Kayıtlı Doktor</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Son Eklenen Doktorlar Tablosu (Zaman Filtresi ile) -->
+                    <div class="recent-doctors-section">
+                        <div class="section-header-with-filter">
+                            <h3 class="section-title">👨‍⚕️ Son Eklenen Doktorlar</h3>
+                            <div class="time-filter">
+                                <button class="time-filter-btn active" data-period="today"
+                                    onclick="filterRecentDoctors('today')">Bugün</button>
+                                <button class="time-filter-btn" data-period="month"
+                                    onclick="filterRecentDoctors('month')">Bu Ay</button>
+                                <button class="time-filter-btn" data-period="year"
+                                    onclick="filterRecentDoctors('year')">Bu Yıl</button>
+                            </div>
+                        </div>
+                        <div class="recent-doctors-table" id="recentDoctorsTable">
+                            <!-- JavaScript ile doldurulacak -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SEKME 1: YENİ DOKTOR TALEPLERİ -->
+            <div id="pendingTab" class="content-section">
+                <div class="content-header">
+                    <h2>Gelen Yeni Talepler</h2>
+                </div>
+                <div id="pendingList" class="content-body"></div>
+            </div>
+
+            <!-- SEKME 2: BİLGİ DEĞİŞİKLİĞİ TALEPLERİ -->
+            <div id="updatesTab" class="content-section">
+                <div class="content-header">
+                    <h2>Bilgi Güncelleme İstekleri</h2>
+                </div>
+                <div id="updatesList" class="content-body"></div>
+            </div>
+
+            <!-- SEKME 3: KAYITLI DOKTOR LİSTESİ -->
+            <div id="registeredTab" class="content-section">
+                <div class="content-header registered-header">
+                    <h2 class="premium-title">Kayıtlı Doktorlar</h2>
+                    <div class="filter-bar">
+                        <div class="filter-group">
+                            <select id="filterUnvan" onchange="applyFilters()">
+                                <option value="">Unvan</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <select id="filterBrans" onchange="applyFilters()">
+                                <option value="">Branş</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <select id="filterSehir" onchange="applyFilters()">
+                                <option value="">Şehir</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <select id="filterHastane" onchange="applyFilters()">
+                                <option value="">Hastane</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div id="registeredList" class="content-body"></div>
+            </div>
+
+            <!-- SEKME 4: KAYITLI HASTANELER -->
+            <div id="hospitalsTab" class="content-section">
+                <div class="content-header">
+                    <h2 class="premium-title">Kayıtlı Hastaneler</h2>
+                </div>
+                <div class="content-body">
+                    <div class="hospital-filters">
+                        <input type="text" id="hospitalSearch" placeholder="Hastane ara..." oninput="filterHospitals()">
+                        <select id="hospitalCityFilter" onchange="filterHospitals()">
+                            <option value="">Tüm Şehirler</option>
+                        </select>
+                    </div>
+                    <div id="hospitalsList" class="hospitals-grid"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- --- MODALLAR --- -->
+
+        <!-- MODAL: Doktor Detay ve Puanlama -->
+        <div id="doctorModal" class="modal">
+            <div class="modal-content">
+                <span class="modal-close" onclick="closeModal()">&times;</span>
+                <div class="modal-tabs">
+                    <button class="modal-tab-btn active" onclick="switchModalTab('info')">Kullanıcı Bilgileri</button>
+                    <button class="modal-tab-btn" onclick="switchModalTab('scores')">Site Puanları</button>
+                </div>
+                <div id="modalUserInfo" class="modal-tab active"></div>
+                <div id="modalScores" class="modal-tab"></div>
+            </div>
+        </div>
+
+        <!-- MODAL: Onay/Red Onayı (Confirm) -->
+        <div id="confirmModal" class="modal">
+            <div class="modal-content confirm-modal">
+                <div class="confirm-icon">⚠️</div>
+                <h3 id="confirmTitle">Emin misiniz?</h3>
+                <p id="confirmMessage">Bu işlemi gerçekleştirmek istediğinize emin misiniz?</p>
+                <div class="confirm-actions">
+                    <button class="btn btn-secondary" onclick="closeConfirm()">İptal</button>
+                    <button class="btn btn-primary" id="confirmBtn">Tamam</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: Doktor Bilgilerini Düzenle -->
+        <div id="editModal" class="modal">
+            <div class="modal-content edit-modal">
+                <span class="modal-close" onclick="closeEditModal()">&times;</span>
+                <h3 class="edit-modal-title">✏️ Doktor Bilgilerini Düzenle</h3>
+                <form id="editForm" class="edit-form">
+                    <input type="hidden" id="editDoctorId">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Unvan</label>
+                            <select id="editUnvan">
+                                <option value="">Seçiniz...</option>
+                                <option value="Prof. Dr.">Prof. Dr.</option>
+                                <option value="Doç. Dr.">Doç. Dr.</option>
+                                <option value="Uzm. Dr.">Uzm. Dr.</option>
+                                <option value="Op. Dr.">Op. Dr.</option>
+                                <option value="Dr.">Dr.</option>
+                                <option value="Cer.">Cer.</option>
+                                <option value="Prat.">Prat.</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Branş</label>
+                            <select id="editBrans">
+                                <option value="">Seçiniz...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Ad *</label>
+                            <input type="text" id="editAd" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Soyad *</label>
+                            <input type="text" id="editSoyad" required>
+                        </div>
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Şehir</label>
+                        <select id="editSehir">
+                            <option value="">Seçiniz...</option>
+                        </select>
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Hastane</label>
+                        <input type="text" id="editHastane">
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeEditModal()">İptal</button>
+                        <button type="submit" class="btn btn-success">💾 Kaydet</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- MODAL: Şifre Değiştirme -->
+        <div id="passwordModal" class="modal">
+            <div class="modal-content password-modal">
+                <span class="modal-close" onclick="closePasswordModal()">&times;</span>
+                <h3 class="password-modal-title">🔐 Şifre Değiştir</h3>
+                <form id="passwordForm" class="edit-form">
+                    <div class="form-group full-width">
+                        <label>Mevcut Şifre *</label>
+                        <input type="password" id="currentPassword" required>
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Yeni Şifre *</label>
+                        <input type="password" id="newPassword" required>
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Yeni Şifre (Tekrar) *</label>
+                        <input type="password" id="confirmPassword" required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closePasswordModal()">İptal</button>
+                        <button type="submit" class="btn btn-primary">🔐 Şifreyi Değiştir</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- MODAL: Doktor Ekle (Direct Add) -->
+        <div id="addDoctorModal" class="modal">
+            <div class="modal-content add-doctor-modal">
+                <span class="modal-close" onclick="closeAddDoctorModal()">&times;</span>
+                <h3 class="add-doctor-modal-title">➕ Yeni Doktor Ekle</h3>
+                <p class="add-doctor-subtitle">Doktor bilgilerini girerek doğrudan sisteme kayıt yapabilirsiniz.</p>
+                <form id="addDoctorForm" class="edit-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Unvan</label>
+                            <select id="addUnvan">
+                                <option value="">Seçiniz...</option>
+                                <option value="Prof. Dr.">Prof. Dr.</option>
+                                <option value="Doç. Dr.">Doç. Dr.</option>
+                                <option value="Uzm. Dr.">Uzm. Dr.</option>
+                                <option value="Op. Dr.">Op. Dr.</option>
+                                <option value="Dr.">Dr.</option>
+                                <option value="Dt.">Dt.</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Branş</label>
+                            <select id="addBrans">
+                                <option value="">Seçiniz...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Ad *</label>
+                            <input type="text" id="addAd" required placeholder="Doktor adı...">
+                        </div>
+                        <div class="form-group">
+                            <label>Soyad *</label>
+                            <input type="text" id="addSoyad" required placeholder="Doktor soyadı...">
+                        </div>
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Şehir</label>
+                        <select id="addSehir">
+                            <option value="">Seçiniz...</option>
+                        </select>
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Hastane</label>
+                        <input type="text" id="addHastane" placeholder="Hastane adı...">
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeAddDoctorModal()">İptal</button>
+                        <button type="submit" class="btn btn-success">➕ Doktor Ekle</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- MODAL: Hastane Düzenle -->
+        <div id="hospitalModal" class="modal">
+            <div class="modal-content edit-modal">
+                <span class="modal-close" onclick="closeHospitalModal()">&times;</span>
+                <h3 class="edit-modal-title">🏥 Hastane Düzenle</h3>
+                <form id="hospitalForm" class="edit-form">
+                    <input type="hidden" id="hospitalOldName">
+                    <div class="form-group full-width">
+                        <label>Hastane Adı *</label>
+                        <input type="text" id="hospitalName" required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeHospitalModal()">İptal</button>
+                        <button type="submit" class="btn btn-success">💾 Kaydet</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Toast (Küçük Bildirim Kutusu) -->
+        <div id="toast" class="toast"></div>
+    </div>
+
+    <!-- JAVASCRIPT MANTIĞI -->
+    <script>
+
+
+        let pendingDoctors = [];
+        let updateRequests = [];
+        let registeredDoctors = [];
+        let allDoctors = [];
+
+        /**
+         * Tüm verileri API üzerinden yükler ve arayüzü günceller.
+         */
+        async function loadData() {
+            try {
+                const [pending, updates, doctors] = await Promise.all([
+                    fetch('/api/pending-doctors').then(r => r.json()),
+                    fetch('/api/update-requests').then(r => r.json()),
+                    fetch('/api/doctors').then(r => r.json())
+                ]);
+
+                allDoctors = doctors;
+                pendingDoctors = pending;
+                updateRequests = updates;
+                registeredDoctors = doctors.filter(d => d.durum === 'onaylandi');
+
+                // Sayaçları güncelle
+                document.getElementById('pendingCount').textContent = pendingDoctors.length;
+                document.getElementById('updateCount').textContent = updateRequests.length;
+                document.getElementById('registeredCount').textContent = registeredDoctors.length;
+
+                renderPending();
+                renderUpdates();
+                renderRegistered();
+                updateFilterOptions();
+
+                // Dashboard'daki son eklenen doktorları render et
+                renderRecentDoctors('today'); // Varsayılan olarak bugün
+            } catch (err) {
+                console.error("Veri yükleme hatası:", err);
+                showToast("Veriler yüklenemedi!", "error");
+            }
+        }
+
+        /**
+         * Yeni doktor taleplerini listeler.
+         */
+        function renderPending() {
+            const list = document.getElementById('pendingList');
+            if (pendingDoctors.length === 0) {
+                list.innerHTML = '<div class="empty-state">📭 Bekleyen talep yok</div>';
+                return;
+            }
+
+            list.innerHTML = pendingDoctors.map(d => `
+                <div class="doctor-item" onclick="showDoctorDetail('${d.id}')">
+                    <div class="doctor-main">
+                        <h3>${d.unvan || ''} ${d.ad} ${d.soyad}</h3>
+                        <div class="doctor-meta">
+                            <span class="meta-badge">📌 ${d.brans || '-'}</span>
+                            <span class="meta-badge">📍 ${d.sehir || '-'}</span>
+                            <span class="meta-badge ${d.durum === 'tamamlandi' ? 'badge-success' : 'badge-timer'}">
+                                ${d.durum === 'tamamlandi' ? '✅ Tarama Bitti' : '⏳ Taranıyor...'}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="doctor-actions">
+                        <button class="btn btn-danger" onclick="event.stopPropagation(); deleteDoctor('${d.id}')">Sil</button>
+                        <button class="btn btn-success" onclick="event.stopPropagation(); approveDoctor('${d.id}')">Onayla</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        /**
+         * Bilgi güncelleme taleplerini listeler.
+         */
+        function renderUpdates() {
+            const list = document.getElementById('updatesList');
+            if (updateRequests.length === 0) {
+                list.innerHTML = '<div class="empty-state">📭 Güncelleme talebi yok</div>';
+                return;
+            }
+
+            list.innerHTML = updateRequests.map(r => {
+                const doc = allDoctors.find(d => d.id === r.doctor_id) || {};
+
+                // Değişiklik detaylarını hazırla
+                const changesList = Object.entries(r.degisiklikler || {}).map(([key, newVal]) => {
+                    const oldVal = doc[key] || '-';
+                    const labels = { 'ad': 'Ad', 'soyad': 'Soyad', 'unvan': 'Unvan', 'brans': 'Branş', 'sehir': 'Şehir', 'hastane': 'Hastane' };
+                    const label = labels[key] || key;
+                    return `<div class="change-preview-row"><strong>${label}:</strong> <span class="old-value">${oldVal}</span> → <span class="new-value">${newVal}</span></div>`;
+                }).join('');
+
+                return `
+                <div class="update-item" onclick="showDoctorDetail('${r.id}', 'update')">
+                    <div class="doctor-main">
+                        <h3>${doc.unvan || ''} ${doc.ad || ''} ${doc.soyad || ''}</h3>
+                        <div class="doctor-meta">
+                            <span class="meta-badge">✏️ Değişiklik Talebi</span>
+                            <span class="meta-badge">📅 ${new Date(r.tarih).toLocaleDateString('tr-TR')}</span>
+                        </div>
+                        <div class="changes-preview-box">
+                            ${changesList}
+                        </div>
+                    </div>
+                    <div class="doctor-actions">
+                        <button class="btn btn-danger" onclick="event.stopPropagation(); rejectUpdateRequest('${r.id}')">Reddet</button>
+                        <button class="btn btn-success" onclick="event.stopPropagation(); approveUpdateRequest('${r.id}')">Kabul Et</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        /**
+         * Kayıtlı (onaylı) doktorları listeler (Filtreleme destekli).
+         */
+        function renderRegistered(filteredList = null) {
+            const list = document.getElementById('registeredList');
+            const dataToRender = filteredList || registeredDoctors;
+
+            if (dataToRender.length === 0) {
+                list.innerHTML = '<div class="empty-state">👨‍⚕️ Eşleşen doktor bulunamadı</div>';
+                return;
+            }
+
+            list.innerHTML = dataToRender.map(d => `
+                <div class="doctor-item" onclick="showDoctorDetail('${d.id}', 'pending')">
+                    <div class="doctor-main">
+                        <h3>${d.unvan || ''} ${d.ad} ${d.soyad}</h3>
+                        <div class="doctor-meta">
+                            <span class="meta-badge">📌 ${d.brans || '-'}</span>
+                            <span class="meta-badge">📍 ${d.sehir || '-'}</span>
+                        </div>
+                    </div>
+                    <div class="doctor-actions">
+                        <button class="btn btn-primary" onclick="event.stopPropagation(); editDoctor('${d.id}')">Düzenle</button>
+                        <button class="btn btn-danger" onclick="event.stopPropagation(); deleteDoctor('${d.id}')">Sil</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        /**
+         * Filtre seçeneklerini API'den gelen verilere göre günceller.
+         */
+        async function updateFilterOptions() {
+            try {
+                const [unvanlar, branslar, sehirler, hastaneler] = await Promise.all([
+                    fetch('/api/unvanlar').then(r => r.json()),
+                    fetch('/api/branslar').then(r => r.json()),
+                    fetch('/api/sehirler').then(r => r.json()),
+                    fetch('/api/hastaneler').then(r => r.json())
+                ]);
+
+                const populate = (id, items, label) => {
+                    const el = document.getElementById(id);
+                    const currentVal = el.value;
+                    el.innerHTML = `<option value="">${label}</option>` +
+                        items.map(i => `<option value="${i}" ${i === currentVal ? 'selected' : ''}>${i}</option>`).join('');
+                };
+
+                populate('filterUnvan', unvanlar, 'Unvan');
+                populate('filterBrans', branslar, 'Branş');
+                populate('filterSehir', sehirler, 'Şehir');
+                populate('filterHastane', hastaneler, 'Hastane');
+            } catch (error) {
+                console.error("Filtre yükleme hatası:", error);
+            }
+        }
+
+        /**
+         * Seçili filtrelere göre listeyi günceller.
+         */
+        function applyFilters() {
+            const u = document.getElementById('filterUnvan').value;
+            const b = document.getElementById('filterBrans').value;
+            const s = document.getElementById('filterSehir').value;
+            const h = document.getElementById('filterHastane').value;
+
+            const filtered = registeredDoctors.filter(d => {
+                return (!u || d.unvan === u) &&
+                    (!b || d.brans === b) &&
+                    (!s || d.sehir === s) &&
+                    (!h || (d.hastane && d.hastane.trim() === h));
+            });
+
+            renderRegistered(filtered);
+        }
+
+        /**
+         * Doktorun detaylı bilgilerini ve site puanlarını modalda gösterir.
+         */
+        function showDoctorDetail(id, type = 'pending') {
+            let doctor = null;
+            let request = null;
+
+            if (type === 'pending') {
+                doctor = pendingDoctors.find(d => d.id === id);
+            } else if (type === 'update') {
+                request = updateRequests.find(r => r.id === id);
+                if (request) doctor = allDoctors.find(d => d.id === request.doctor_id);
+            }
+
+            if (!doctor) return;
+
+            const info = document.getElementById('modalUserInfo');
+            const scores = document.getElementById('modalScores');
+
+            // Bilgi Sekmesi
+            if (type === 'update' && request) {
+                info.innerHTML = `
+                    <div class="detail-section">
+                        <h4 class="section-title">📋 Mevcut Veri</h4>
+                        <div class="detail-grid">
+                            ${['ad', 'soyad', 'unvan', 'brans', 'sehir', 'hastane'].map(k => `<div><strong>${k.toUpperCase()}:</strong> ${doctor[k] || '-'}</div>`).join('')}
+                        </div>
+                    </div>
+                    <div class="detail-section">
+                        <h4 class="section-title">✏️ Talep Edilen Değişiklikler</h4>
+                        <div class="changes-preview">
+                            ${Object.entries(request.degisiklikler).map(([k, v]) => `
+                                <div class="change-row">
+                                    <span>${k}:</span> <span class="change-old">${doctor[k] || '-'}</span> ➔ <span class="change-new">${v}</span>
+                                </div>`).join('')}
+                        </div>
+                    </div>
+                `;
+            } else {
+                info.innerHTML = `
+                    <div class="detail-grid">
+                        ${['ad', 'soyad', 'unvan', 'brans', 'sehir', 'hastane'].map(k => `<div><strong>${k.toUpperCase()}:</strong> ${doctor[k] || '-'}</div>`).join('')}
+                        <div class="detail-full"><strong>TALEP TARİHİ:</strong> ${new Date(doctor.tarih).toLocaleString('tr-TR')}</div>
+                    </div>
+                `;
+            }
+
+            // Puan Sekmesi
+            const sitePuanlari = doctor.site_puanlari || {};
+            if (Object.keys(sitePuanlari).length > 0) {
+                renderScoresGrid(id, sitePuanlari, doctor.site_sonuclari || {});
+            } else {
+                scores.innerHTML = '<div class="empty-state">⏳ Puanlar hesaplanıyor...</div>';
+            }
+
+            document.getElementById('doctorModal').style.display = 'flex';
+        }
+
+        /**
+         * Sitelerden alınan puanları ızgara (grid) yapısında gösterir.
+         */
+        function renderScoresGrid(doctorId, sitePuanlari, siteSonuclari) {
+            const scores = document.getElementById('modalScores');
+            const sorted = Object.entries(sitePuanlari).sort((a, b) => (b[1].puan || 0) - (a[1].puan || 0));
+
+            scores.innerHTML = `<div class="scores-grid">
+                ${sorted.map(([site, data]) => {
+                const p = data.puan || 0;
+                const bulundu = siteSonuclari[site]?.bulundu;
+                const color = !bulundu ? 'score-low' : (p >= 70 ? 'score-high' : p >= 40 ? 'score-medium' : 'score-low');
+                return `
+                        <div class="score-card ${color}" onclick="showScoreDetail('${site}', '${doctorId}')">
+                            <div class="score-site-name">${site}</div>
+                            ${!bulundu ? '<div class="no-data">Veri Bulunamadı</div>' :
+                        `<div class="score-value">${p}<span>/100</span></div><div class="score-bar"><div class="score-bar-fill" style="width:${p}%"></div></div>`}
+                        </div>`;
+            }).join('')}
+            </div>`;
+        }
+
+        /**
+         * Belirli bir site için puan dağılımını ve temizlenmiş verileri gösterir.
+         */
+        function showScoreDetail(siteName, doctorId) {
+            const doctor = allDoctors.find(d => d.id === doctorId) || pendingDoctors.find(d => d.id === doctorId);
+            const siteData = doctor.site_puanlari[siteName];
+            const siteSonuc = doctor.site_sonuclari[siteName];
+
+            // Veri temizleme yardımcısı (Kod kirliliğini engeller)
+            const clean = (v) => {
+                if (!v || v === '-') return '-';
+                let s = String(v).trim();
+                if (s.length > 200 || s.includes('{') || s.includes('<script')) return 'Detaylı veri (Gizlendi)';
+                return s;
+            };
+
+            const labels = { 'ad': 'Ad', 'soyad': 'Soyad', 'unvan': 'Unvan', 'brans': 'Branş', 'sehir': 'Şehir', 'hastane': 'Hastane' };
+            const max = { 'ad': 10, 'soyad': 10, 'unvan': 20, 'brans': 20, 'sehir': 20, 'hastane': 20 };
+
+            document.getElementById('modalScores').innerHTML = `
+                <div class="score-detail-view">
+                    <button class="btn-back" onclick="renderScoreGridDetails('${doctorId}')">← Geri Dön</button>
+                    <h3>${siteName} Puan Detayı</h3>
+                    <div class="found-grid">
+                        ${Object.keys(labels).map(k => `<div><strong>${labels[k]}:</strong> ${clean(siteSonuc[k])}</div>`).join('')}
+                    </div>
+                    <div class="points-list">
+                        ${Object.entries(labels).map(([k, l]) => {
+                const p = siteData.detay?.[k] || 0;
+                return `<div class="point-row"><span>${l}</span> <div class="p-bar"><div style="width:${(p / max[k]) * 100}%"></div></div> <span>${p}/${max[k]}</span></div>`;
+            }).join('')}
+                    </div>
+                </div>`;
+        }
+
+        function renderScoreGridDetails(id) {
+            const doc = allDoctors.find(d => d.id === id) || pendingDoctors.find(d => d.id === id);
+            renderScoresGrid(id, doc.site_puanlari, doc.site_sonuclari);
+        }
+
+        /**
+         * Tablar arası geçiş yapar.
+         */
+        function switchTab(tab) {
+            // Tüm nav-item'lardan active'i kaldır (add-doctor-btn hariç)
+            document.querySelectorAll('.sidebar-nav a.nav-item').forEach(n => n.classList.remove('active'));
+            document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+
+            const mapping = {
+                'home': 'homeTab',
+                'pending': 'pendingTab',
+                'updates': 'updatesTab',
+                'registered': 'registeredTab',
+                'hospitals': 'hospitalsTab'
+            };
+            document.getElementById(mapping[tab]).classList.add('active');
+
+            // Sidebar linkini aktif yap (sadece a etiketleri, button değil)
+            const links = document.querySelectorAll('.sidebar-nav a.nav-item');
+            if (tab === 'home') links[0].classList.add('active');
+            else if (tab === 'pending') links[1].classList.add('active');
+            else if (tab === 'updates') links[2].classList.add('active');
+            else if (tab === 'registered') links[3].classList.add('active');
+            else if (tab === 'hospitals') {
+                links[4].classList.add('active');
+                renderHospitals();
+            }
+        }
+
+        // --- CRUD İŞLEMLERİ (API) ---
+
+        async function approveDoctor(id) {
+            if (await showConfirm('Onay', 'Bu doktoru onaylıyor musunuz?')) {
+                const res = await fetch(`/api/approve-doctor/${id}`, { method: 'POST' });
+                if (res.ok) { showToast('Doktor eklendi'); loadData(); }
+            }
+        }
+
+        async function deleteDoctor(id) {
+            if (await showConfirm('Sil', 'Kaydı silmek istediğinize emin misiniz?')) {
+                const res = await fetch(`/api/doctor/${id}`, { method: 'DELETE' });
+                if (res.ok) { showToast('Kayıt silindi'); loadData(); }
+            }
+        }
+
+        async function approveUpdateRequest(id) {
+            if (await showConfirm('Onay', 'Bu değişikliği onaylıyor musunuz?')) {
+                const res = await fetch(`/api/approve-update-request/${id}`, { method: 'POST' });
+                if (res.ok) { showToast('Değişiklik uygulandı'); loadData(); }
+            }
+        }
+
+        async function rejectUpdateRequest(id) {
+            if (await showConfirm('Red', 'Bu değişikliği reddetmek istediğinize emin misiniz?')) {
+                const res = await fetch(`/api/reject-update-request/${id}`, { method: 'POST' });
+                if (res.ok) { showToast('Değişiklik reddedildi'); loadData(); }
+            }
+        }
+
+        async function editDoctor(id) {
+            const doc = allDoctors.find(d => d.id === id);
+            if (!doc) return;
+
+            // Branş ve Şehir listelerini de yükle (select'leri doldurmak için)
+            const [branslar, sehirlerRes] = await Promise.all([
+                fetch('/api/branslar').then(r => r.json()),
+                fetch('/api/sehirler').then(r => r.json())
+            ]);
+
+            const bransSelect = document.getElementById('editBrans');
+            bransSelect.innerHTML = '<option value="">Seçiniz...</option>' +
+                branslar.map(b => `<option value="${b}">${b}</option>`).join('');
+
+            const sehirSelect = document.getElementById('editSehir');
+            sehirSelect.innerHTML = '<option value="">Seçiniz...</option>' +
+                sehirlerRes.map(s => `<option value="${s}">${s}</option>`).join('');
+
+            // Formu doldur
+            document.getElementById('editDoctorId').value = doc.id;
+            document.getElementById('editUnvan').value = doc.unvan || '';
+            document.getElementById('editAd').value = doc.ad || '';
+            document.getElementById('editSoyad').value = doc.soyad || '';
+            document.getElementById('editBrans').value = doc.brans || '';
+            document.getElementById('editSehir').value = doc.sehir || '';
+            document.getElementById('editHastane').value = doc.hastane || '';
+
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+
+        // --- YENİ: DASHBOARD ANALİTİKLERİ ---
+
+        /**
+         * Dashboard istatistiklerini hesaplayıp gösterir
+         */
+        function renderDashboardAnalytics() {
+            if (registeredDoctors.length === 0) {
+                document.getElementById('topBranch').textContent = '-';
+                document.getElementById('topBranchCount').textContent = '';
+                document.getElementById('topCity').textContent = '-';
+                document.getElementById('topCityCount').textContent = '';
+                document.getElementById('avgScore').textContent = '-';
+                document.getElementById('weeklyAdditions').textContent = '0';
+                return;
+            }
+
+            // En çok kayıtlı branş
+            const branchCounts = {};
+            registeredDoctors.forEach(d => {
+                if (d.brans) {
+                    branchCounts[d.brans] = (branchCounts[d.brans] || 0) + 1;
+                }
+            });
+            const topBranch = Object.entries(branchCounts).sort((a, b) => b[1] - a[1])[0];
+            if (topBranch) {
+                document.getElementById('topBranch').textContent = topBranch[0];
+                document.getElementById('topBranchCount').textContent = `(${topBranch[1]} doktor)`;
+            }
+
+            // En çok kayıtlı şehir
+            const cityCounts = {};
+            registeredDoctors.forEach(d => {
+                if (d.sehir) {
+                    cityCounts[d.sehir] = (cityCounts[d.sehir] || 0) + 1;
+                }
+            });
+            const topCity = Object.entries(cityCounts).sort((a, b) => b[1] - a[1])[0];
+            if (topCity) {
+                document.getElementById('topCity').textContent = topCity[0];
+                document.getElementById('topCityCount').textContent = `(${topCity[1]} doktor)`;
+            }
+
+            // Ortalama site puanı hesapla
+            let totalScore = 0;
+            let scoreCount = 0;
+            registeredDoctors.forEach(d => {
+                if (d.site_puanlari) {
+                    Object.values(d.site_puanlari).forEach(s => {
+                        if (s.puan > 0) {
+                            totalScore += s.puan;
+                            scoreCount++;
+                        }
+                    });
+                }
+            });
+            const avgScore = scoreCount > 0 ? Math.round(totalScore / scoreCount) : 0;
+            document.getElementById('avgScore').textContent = avgScore;
+
+            // Bu hafta eklenenler (son 7 gün)
+            const weekAgo = new Date();
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            const weeklyDocs = registeredDoctors.filter(d => {
+                const docDate = new Date(d.tarih);
+                return docDate >= weekAgo;
+            });
+            document.getElementById('weeklyAdditions').textContent = weeklyDocs.length;
+        }
+
+        /**
+         * Son eklenen doktorları tabloda gösterir
+         */
+        /**
+         * Son eklenen doktorları zaman dilimine göre gösterir
+         * @param {string} period - 'today', 'month', 'year'
+         */
+        function renderRecentDoctors(period = 'today') {
+            const container = document.getElementById('recentDoctorsTable');
+            if (registeredDoctors.length === 0) {
+                container.innerHTML = '<div class="empty-state-small">Henüz onaylanmış doktor yok</div>';
+                return;
+            }
+
+            // Zaman filtresiyle doktorları filtrele
+            const now = new Date();
+            const filtered = registeredDoctors.filter(d => {
+                const docDate = new Date(d.tarih);
+
+                if (period === 'today') {
+                    return docDate.toDateString() === now.toDateString();
+                } else if (period === 'month') {
+                    return docDate.getMonth() === now.getMonth() &&
+                        docDate.getFullYear() === now.getFullYear();
+                } else if (period === 'year') {
+                    return docDate.getFullYear() === now.getFullYear();
+                }
+                return false;
+            });
+
+            // Tarihe göre sırala (en yeni en üstte)
+            const sorted = filtered.sort((a, b) => new Date(b.tarih) - new Date(a.tarih));
+
+            if (sorted.length === 0) {
+                const labels = {
+                    'today': 'bugün',
+                    'month': 'bu ay',
+                    'year': 'bu yıl'
+                };
+                container.innerHTML = `<div class="empty-state-small">${labels[period]} eklenen doktor yok</div>`;
+                return;
+            }
+
+            container.innerHTML = `
+                <table class="recent-table">
+                    <thead>
+                        <tr>
+                            <th>Unvan & Ad Soyad</th>
+                            <th>Branş</th>
+                            <th>Şehir</th>
+                            <th>Eklenme Tarihi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${sorted.map(d => `
+                            <tr onclick="showDoctorDetail('${d.id}', 'pending')">
+                                <td><strong>${d.unvan || ''} ${d.ad} ${d.soyad}</strong></td>
+                                <td>${d.brans || '-'}</td>
+                                <td>${d.sehir || '-'}</td>
+                                <td>${new Date(d.tarih).toLocaleDateString('tr-TR')}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        /**
+         * Zaman filtre butonlarını günceller ve render eder
+         */
+        function filterRecentDoctors(period) {
+            // Buton aktif durumlarını güncelle
+            document.querySelectorAll('.time-filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.getAttribute('data-period') === period) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // Listeyi yenile
+            renderRecentDoctors(period);
+        }
+
+        /**
+         * Her sitenin başarı oranını hesaplayıp gösterir
+         */
+        function renderSiteSuccessRates() {
+            const container = document.getElementById('siteSuccessGrid');
+            if (registeredDoctors.length === 0) {
+                container.innerHTML = '<div class="empty-state-small">Henüz analiz edilecek veri yok</div>';
+                return;
+            }
+
+            // Her site için başarı sayısını hesapla
+            const siteStats = {};
+            registeredDoctors.forEach(d => {
+                if (d.site_sonuclari) {
+                    Object.entries(d.site_sonuclari).forEach(([site, data]) => {
+                        if (!siteStats[site]) {
+                            siteStats[site] = { success: 0, total: 0 };
+                        }
+                        siteStats[site].total++;
+                        if (data && data.bulundu) {
+                            siteStats[site].success++;
+                        }
+                    });
+                }
+            });
+
+            // Başarı oranına göre sırala
+            const sorted = Object.entries(siteStats)
+                .map(([site, stats]) => ({
+                    site,
+                    rate: stats.total > 0 ? Math.round((stats.success / stats.total) * 100) : 0,
+                    success: stats.success,
+                    total: stats.total
+                }))
+                .sort((a, b) => b.rate - a.rate);
+
+            container.innerHTML = sorted.map(s => `
+                <div class="site-success-item">
+                    <div class="site-success-header">
+                        <span class="site-name">${s.site}</span>
+                        <span class="site-percentage">${s.rate}%</span>
+                    </div>
+                    <div class="site-progress-bar">
+                        <div class="site-progress-fill" style="width: ${s.rate}%; background: ${s.rate >= 70 ? '#10b981' : s.rate >= 40 ? '#f59e0b' : '#ef4444'}"></div>
+                    </div>
+                    <div class="site-stats">${s.success}/${s.total} doktor bulundu</div>
+                </div>
+            `).join('');
+        }
+
+        // --- YARDIMCI GÖRSEL ARAÇLAR ---
+
+
+        function closeEditModal() { closeModal('editModal'); }
+        function closePasswordModal() { closeModal('passwordModal'); }
+
+        let confirmResolve = null;
+        function showConfirm(title, msg) {
+            return new Promise(res => {
+                confirmResolve = res;
+                document.getElementById('confirmTitle').textContent = title;
+                document.getElementById('confirmMessage').textContent = msg;
+                document.getElementById('confirmModal').style.display = 'flex';
+                document.getElementById('confirmBtn').onclick = () => { closeModal('confirmModal'); res(true); };
+            });
+        }
+
+        function closeConfirm() { closeModal('confirmModal'); if (confirmResolve) confirmResolve(false); }
+
+        function showToast(msg, type = 'success') {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = `toast toast-${type} show`;
+            setTimeout(() => t.className = 'toast', 3000);
+        }
+
+        function closeModal(id) {
+            if (id) document.getElementById(id).style.display = 'none';
+            else document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+        }
+
+        function switchModalTab(tab) {
+            document.querySelectorAll('.modal-tab-btn').forEach(b => b.classList.toggle('active'));
+            document.querySelectorAll('.modal-tab').forEach(t => t.classList.toggle('active'));
+        }
+
+        function logout() { window.location.href = '/api/logout'; }
+
+        // --- ŞİFRE DEĞİŞTİRME ---
+        function openPasswordModal() {
+            document.getElementById('currentPassword').value = '';
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+            document.getElementById('passwordModal').style.display = 'flex';
+        }
+
+        document.getElementById('passwordForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (newPassword !== confirmPassword) {
+                showToast('Yeni şifreler eşleşmiyor!', 'error');
+                return;
+            }
+
+            if (newPassword.length < 4) {
+                showToast('Şifre en az 4 karakter olmalı!', 'error');
+                return;
+            }
+
+            const res = await fetch('/api/change-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    current_password: currentPassword,
+                    new_password: newPassword
+                })
+            });
+
+            if (res.ok) {
+                closePasswordModal();
+                showToast('Şifre başarıyla değiştirildi!', 'success');
+            } else {
+                const data = await res.json();
+                showToast(data.error || 'Şifre değiştirilemedi!', 'error');
+            }
+        });
+
+        // --- DOKTOR EKLE (DİREKT) ---
+        async function openAddDoctorModal() {
+            // Branş ve Şehir listelerini yükle
+            const [branslar, sehirlerRes] = await Promise.all([
+                fetch('/api/branslar').then(r => r.json()),
+                fetch('/api/sehirler').then(r => r.json())
+            ]);
+
+            const bransSelect = document.getElementById('addBrans');
+            bransSelect.innerHTML = '<option value="">Seçiniz...</option>' +
+                branslar.map(b => `<option value="${b}">${b}</option>`).join('');
+
+            const sehirSelect = document.getElementById('addSehir');
+            sehirSelect.innerHTML = '<option value="">Seçiniz...</option>' +
+                sehirlerRes.map(s => `<option value="${s}">${s}</option>`).join('');
+
+            // Formu temizle
+            document.getElementById('addDoctorForm').reset();
+            document.getElementById('addDoctorModal').style.display = 'flex';
+        }
+
+        function closeAddDoctorModal() {
+            document.getElementById('addDoctorModal').style.display = 'none';
+        }
+
+        document.getElementById('addDoctorForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const doctorData = {
+                unvan: document.getElementById('addUnvan').value,
+                ad: document.getElementById('addAd').value.trim(),
+                soyad: document.getElementById('addSoyad').value.trim(),
+                brans: document.getElementById('addBrans').value,
+                sehir: document.getElementById('addSehir').value,
+                hastane: document.getElementById('addHastane').value.trim()
+            };
+
+            if (!doctorData.ad || !doctorData.soyad) {
+                showToast('Ad ve Soyad zorunludur!', 'error');
+                return;
+            }
+
+            const res = await fetch('/api/add-doctor-direct', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(doctorData)
+            });
+
+            if (res.ok) {
+                closeAddDoctorModal();
+                showToast('Doktor başarıyla eklendi!', 'success');
+                loadData();
+            } else {
+                const data = await res.json();
+                showToast(data.error || 'Doktor eklenemedi!', 'error');
+            }
+        });
+
+        // --- KAYITLI HASTANELER ---
+        let allHospitals = []; // [{ name: 'Hastane', city: 'Şehir', doctorCount: 5 }]
+
+        async function renderHospitals() {
+            // Kalıcı hastane listesini API'den al
+            const persistentHospitals = await fetch('/api/hastaneler').then(r => r.json());
+
+            // Her hastane için şehir ve doktor sayısı bilgisi hesapla (mevcut doktorlardan)
+            const hospitalMap = {};
+            persistentHospitals.forEach(name => {
+                hospitalMap[name] = {
+                    name: name,
+                    cities: new Set(),
+                    doctorCount: 0
+                };
+            });
+
+            // Mevcut doktorlardan ek bilgi ekle
+            registeredDoctors.forEach(d => {
+                if (d.hastane && d.hastane.trim()) {
+                    const hospitalName = d.hastane.trim();
+                    if (hospitalMap[hospitalName]) {
+                        if (d.sehir) {
+                            hospitalMap[hospitalName].cities.add(d.sehir);
+                        }
+                        hospitalMap[hospitalName].doctorCount++;
+                    }
+                }
+            });
+
+            // Array'e çevir ve sırala
+            allHospitals = Object.values(hospitalMap).map(h => ({
+                name: h.name,
+                city: Array.from(h.cities).join(', ') || '-',
+                cities: Array.from(h.cities),
+                doctorCount: h.doctorCount
+            })).sort((a, b) => a.name.localeCompare(b.name, 'tr'));
+
+            // Şehir filtresini doldur
+            populateCityFilter();
+            displayHospitals(allHospitals);
+        }
+
+        function populateCityFilter() {
+            const citySet = new Set();
+            allHospitals.forEach(h => {
+                h.cities.forEach(c => citySet.add(c));
+            });
+
+            const cityFilter = document.getElementById('hospitalCityFilter');
+            const currentValue = cityFilter.value;
+            cityFilter.innerHTML = '<option value="">Tüm Şehirler</option>';
+
+            Array.from(citySet).sort((a, b) => a.localeCompare(b, 'tr')).forEach(city => {
+                const option = document.createElement('option');
+                option.value = city;
+                option.textContent = city;
+                cityFilter.appendChild(option);
+            });
+
+            cityFilter.value = currentValue; // Seçimi koru
+        }
+
+        function displayHospitals(hospitals) {
+            const list = document.getElementById('hospitalsList');
+
+            if (hospitals.length === 0) {
+                list.innerHTML = '<div class="empty-state">🏥 Kayıtlı hastane bulunamadı</div>';
+                return;
+            }
+
+            list.innerHTML = hospitals.map(h => {
+                return `
+                    <div class="hospital-card">
+                        <div class="hospital-icon">🏥</div>
+                        <div class="hospital-info">
+                            <div class="hospital-name">${h.name}</div>
+                            <div class="hospital-meta">${h.doctorCount} doktor kayıtlı • ${h.city}</div>
+                        </div>
+                        <div class="hospital-actions">
+                            <button class="btn btn-primary" onclick="event.stopPropagation(); editHospital('${h.name.replace(/'/g, "\\'")}')">Düzenle</button>
+                            <button class="btn btn-danger" onclick="event.stopPropagation(); deleteHospital('${h.name.replace(/'/g, "\\'")}')">Sil</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function filterHospitals() {
+            const query = document.getElementById('hospitalSearch').value.toLowerCase().trim();
+            const selectedCity = document.getElementById('hospitalCityFilter').value;
+
+            let filtered = allHospitals;
+
+            // Şehir filtresini uygula
+            if (selectedCity) {
+                filtered = filtered.filter(h => h.cities.includes(selectedCity));
+            }
+
+            // Arama filtresini uygula
+            if (query) {
+                filtered = filtered.filter(h => h.name.toLowerCase().includes(query));
+            }
+
+            displayHospitals(filtered);
+        }
+
+        // --- HASTANE DÜZENLEME/SİLME ---
+        function editHospital(hospitalName) {
+            document.getElementById('hospitalOldName').value = hospitalName;
+            document.getElementById('hospitalName').value = hospitalName;
+            document.getElementById('hospitalModal').style.display = 'flex';
+        }
+
+        function closeHospitalModal() {
+            document.getElementById('hospitalModal').style.display = 'none';
+        }
+
+        document.getElementById('hospitalForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const eskiAd = document.getElementById('hospitalOldName').value;
+            const yeniAd = document.getElementById('hospitalName').value.trim();
+
+            if (!yeniAd) {
+                showToast('Hastane adı gerekli!', 'error');
+                return;
+            }
+
+            const res = await fetch('/api/hospital', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    eski_ad: eskiAd,
+                    yeni_ad: yeniAd
+                })
+            });
+
+            if (res.ok) {
+                closeHospitalModal();
+                showToast('Hastane güncellendi!', 'success');
+                loadData(); // Tüm verileri yenile (doktorlar dahil)
+                renderHospitals();
+            } else {
+                const data = await res.json();
+                showToast(data.error || 'Hastane güncellenemedi!', 'error');
+            }
+        });
+
+        async function deleteHospital(hospitalName) {
+            if (await showConfirm('Sil', `"${hospitalName}" listeden silinecek. Kayıtlı doktorlar etkilenmeyecek. Devam edilsin mi?`)) {
+                const res = await fetch(`/api/hospital/${encodeURIComponent(hospitalName)}`, { method: 'DELETE' });
+                if (res.ok) {
+                    showToast('Hastane silindi');
+                    renderHospitals();
+                } else {
+                    showToast('Hastane silinemedi!', 'error');
+                }
+            }
+        }
+
+        // İlk yükleme
+        loadData();
+    </script>
+</body>
+
+</html>
