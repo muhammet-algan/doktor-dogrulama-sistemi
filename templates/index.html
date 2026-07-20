@@ -12,6 +12,10 @@ Modern, temiz ve kullanıcı dostu bir form yapısı sunar.
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Doktor Bildir</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        /* SİBER GÜVENLİK: Honeypot bot tuzağı - Kullanıcılar göremez */
+        .hp-field { position: absolute; left: -9999px; top: -9999px; opacity: 0; height: 0; width: 0; overflow: hidden; pointer-events: none; }
+    </style>
 </head>
 
 <body>
@@ -30,6 +34,13 @@ Modern, temiz ve kullanıcı dostu bir form yapısı sunar.
                     ⚠️ Girdiğiniz bilgilerin doğruluğundan emin olun.
                 </div>
                 <form id="doctorForm">
+                    <!-- SİBER GÜVENLİK: CSRF Token -->
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <!-- SİBER GÜVENLİK: Honeypot Bot Tuzağı (Görünmez) -->
+                    <div class="hp-field" aria-hidden="true" tabindex="-1">
+                        <label>Website (bu alanı boş bırakın)</label>
+                        <input type="text" name="website" autocomplete="off" tabindex="-1">
+                    </div>
                     <div class="form-row">
                         <div class="form-group">
                             <label>Adı *</label>
@@ -466,7 +477,10 @@ Modern, temiz ve kullanıcı dostu bir form yapısı sunar.
 
             const res = await fetch('/api/update-request', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': document.querySelector('[name=csrf_token]')?.value || ''
+                },
                 body: JSON.stringify(data)
             });
 
@@ -484,9 +498,15 @@ Modern, temiz ve kullanıcı dostu bir form yapısı sunar.
             const formData = new FormData(this);
             const data = Object.fromEntries(formData);
 
+            // CSRF token'ı header olarak da gönder
+            const csrfToken = data.csrf_token || '';
+
             const res = await fetch('/api/submit', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
                 body: JSON.stringify(data)
             });
 

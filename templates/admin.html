@@ -51,6 +51,10 @@ Sistem yöneticisinin doktor taleplerini onayladığı, sildiği ve güncelledi�
                         <span class="nav-icon">🏥</span>
                         <span class="nav-text">Kayıtlı Hastaneler</span>
                     </a>
+                    <a href="#" class="nav-item" onclick="switchTab('security')">
+                        <span class="nav-icon">🛡️</span>
+                        <span class="nav-text">Güvenlik Logları</span>
+                    </a>
                 </div>
             </nav>
             <div class="sidebar-footer">
@@ -94,6 +98,13 @@ Sistem yöneticisinin doktor taleplerini onayladığı, sildiği ve güncelledi�
                             <div class="dashboard-info">
                                 <span class="dashboard-value" id="registeredCount">0</span>
                                 <span class="dashboard-label">Kayıtlı Doktor</span>
+                            </div>
+                        </div>
+                        <div class="dashboard-card security-card" onclick="switchTab('security')">
+                            <div class="dashboard-icon">🛡️</div>
+                            <div class="dashboard-info">
+                                <span class="dashboard-value" id="securityEventCount">0</span>
+                                <span class="dashboard-label">Güvenlik Olayı (Bugün)</span>
                             </div>
                         </div>
                     </div>
@@ -179,6 +190,62 @@ Sistem yöneticisinin doktor taleplerini onayladığı, sildiği ve güncelledi�
                     <div id="hospitalsList" class="hospitals-grid"></div>
                 </div>
             </div>
+
+            <!-- SEKME 5: GÜVENLİK LOGLARI -->
+            <div id="securityTab" class="content-section">
+                <div class="content-header">
+                    <h2 class="premium-title">🛡️ Güvenlik Logları</h2>
+                </div>
+                <div class="content-body">
+                    <!-- Güvenlik İstatistikleri Kartları -->
+                    <div class="security-stats-grid">
+                        <div class="security-stat-card">
+                            <div class="stat-icon">🔐</div>
+                            <div class="stat-info">
+                                <span class="stat-value" id="statFailedLogins">0</span>
+                                <span class="stat-label">Başarısız Giriş</span>
+                            </div>
+                        </div>
+                        <div class="security-stat-card">
+                            <div class="stat-icon">🚫</div>
+                            <div class="stat-info">
+                                <span class="stat-value" id="statBlockedIPs">0</span>
+                                <span class="stat-label">Engellenen IP</span>
+                            </div>
+                        </div>
+                        <div class="security-stat-card">
+                            <div class="stat-icon">🤖</div>
+                            <div class="stat-info">
+                                <span class="stat-value" id="statBotsDetected">0</span>
+                                <span class="stat-label">Bot Tespit</span>
+                            </div>
+                        </div>
+                        <div class="security-stat-card">
+                            <div class="stat-icon">📊</div>
+                            <div class="stat-info">
+                                <span class="stat-value" id="statTotalEvents">0</span>
+                                <span class="stat-label">Toplam Olay</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab Seçici: Güvenlik Olayları / Denetim Kayıtları -->
+                    <div class="security-log-tabs">
+                        <button class="security-tab-btn active" onclick="switchSecurityTab('events')">🔒 Güvenlik Olayları</button>
+                        <button class="security-tab-btn" onclick="switchSecurityTab('audit')">📋 Denetim Kayıtları</button>
+                    </div>
+
+                    <!-- Güvenlik Olayları Tablosu -->
+                    <div id="securityEventsSection" class="security-log-section">
+                        <div id="securityEventsList" class="security-events-table"></div>
+                    </div>
+
+                    <!-- Denetim Kayıtları Tablosu -->
+                    <div id="auditLogsSection" class="security-log-section" style="display:none;">
+                        <div id="auditLogsList" class="security-events-table"></div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- --- MODALLAR --- -->
@@ -188,11 +255,13 @@ Sistem yöneticisinin doktor taleplerini onayladığı, sildiği ve güncelledi�
             <div class="modal-content">
                 <span class="modal-close" onclick="closeModal()">&times;</span>
                 <div class="modal-tabs">
-                    <button class="modal-tab-btn active" onclick="switchModalTab('info')">Kullanıcı Bilgileri</button>
-                    <button class="modal-tab-btn" onclick="switchModalTab('scores')">Site Puanları</button>
+                    <button class="modal-tab-btn active" data-tab="info" onclick="switchModalTab('info')">Kullanıcı Bilgileri</button>
+                    <button class="modal-tab-btn" data-tab="scores" onclick="switchModalTab('scores')">Site Puanları</button>
+                    <button class="modal-tab-btn" data-tab="ai" onclick="switchModalTab('ai')">🤖 AI Sonuçları</button>
                 </div>
                 <div id="modalUserInfo" class="modal-tab active"></div>
                 <div id="modalScores" class="modal-tab"></div>
+                <div id="modalAIResults" class="modal-tab"></div>
             </div>
         </div>
 
@@ -406,6 +475,9 @@ Sistem yöneticisinin doktor taleplerini onayladığı, sildiği ve güncelledi�
 
                 // Dashboard'daki son eklenen doktorları render et
                 renderRecentDoctors('today'); // Varsayılan olarak bugün
+
+                // Güvenlik istatistiklerini yükle (Dashboard kartı için)
+                loadSecurityStats();
             } catch (err) {
                 console.error("Veri yükleme hatası:", err);
                 showToast("Veriler yüklenemedi!", "error");
@@ -422,24 +494,46 @@ Sistem yöneticisinin doktor taleplerini onayladığı, sildiği ve güncelledi�
                 return;
             }
 
-            list.innerHTML = pendingDoctors.map(d => `
+            list.innerHTML = pendingDoctors.map(d => {
+                // AI Önerisi Badge
+                let aiBadge = '';
+                const aiData = d.site_puanlari?._ai?._ai_recommendation;
+                if (aiData) {
+                    const badgeClass = aiData.karar === 'onayla' ? 'ai-badge-approve' :
+                                       aiData.karar === 'reddet' ? 'ai-badge-reject' : 'ai-badge-review';
+                    const badgeIcon = aiData.karar === 'onayla' ? '🟢' :
+                                     aiData.karar === 'reddet' ? '🔴' : '🟡';
+                    const badgeText = aiData.karar === 'onayla' ? 'Öner: Onayla' :
+                                     aiData.karar === 'reddet' ? 'Öner: Reddet' : 'Öner: İncele';
+                    aiBadge = `<span class="ai-badge ${badgeClass}" title="AI Güven: ${aiData.guven}% | Risk: ${aiData.risk_skoru} | Bulunma: ${aiData.bulunma}">${badgeIcon} ${badgeText}</span>`;
+                }
+
+                // Risk Skoru Badge
+                let riskBadge = '';
+                if (aiData && aiData.risk_skoru > 0) {
+                    const riskClass = aiData.risk_skoru >= 50 ? 'risk-high' : aiData.risk_skoru >= 25 ? 'risk-medium' : 'risk-low';
+                    riskBadge = `<span class="risk-badge ${riskClass}" title="Risk Faktörleri: ${(aiData.risk_faktorleri || []).join(', ')}">⚠️ Risk: ${aiData.risk_skoru}</span>`;
+                }
+
+                return `
                 <div class="doctor-item" onclick="showDoctorDetail('${d.id}')">
                     <div class="doctor-main">
-                        <h3>${d.unvan || ''} ${d.ad} ${d.soyad}</h3>
+                        <h3>${d.unvan || ''} ${d.ad} ${d.soyad} ${aiBadge}</h3>
                         <div class="doctor-meta">
                             <span class="meta-badge">📌 ${d.brans || '-'}</span>
                             <span class="meta-badge">📍 ${d.sehir || '-'}</span>
                             <span class="meta-badge ${d.durum === 'tamamlandi' ? 'badge-success' : 'badge-timer'}">
                                 ${d.durum === 'tamamlandi' ? '✅ Tarama Bitti' : '⏳ Taranıyor...'}
                             </span>
+                            ${riskBadge}
                         </div>
                     </div>
                     <div class="doctor-actions">
                         <button class="btn btn-danger" onclick="event.stopPropagation(); deleteDoctor('${d.id}')">Sil</button>
                         <button class="btn btn-success" onclick="event.stopPropagation(); approveDoctor('${d.id}')">Onayla</button>
                     </div>
-                </div>
-            `).join('');
+                </div>`;
+            }).join('');
         }
 
         /**
@@ -614,6 +708,9 @@ Sistem yöneticisinin doktor taleplerini onayladığı, sildiği ve güncelledi�
                 scores.innerHTML = '<div class="empty-state">⏳ Puanlar hesaplanıyor...</div>';
             }
 
+            // AI Sonuçları Sekmesi
+            renderAIResults(doctor);
+
             document.getElementById('doctorModal').style.display = 'flex';
         }
 
@@ -622,7 +719,9 @@ Sistem yöneticisinin doktor taleplerini onayladığı, sildiği ve güncelledi�
          */
         function renderScoresGrid(doctorId, sitePuanlari, siteSonuclari) {
             const scores = document.getElementById('modalScores');
-            const sorted = Object.entries(sitePuanlari).sort((a, b) => (b[1].puan || 0) - (a[1].puan || 0));
+            const sorted = Object.entries(sitePuanlari)
+                .filter(([key]) => key !== '_ai')
+                .sort((a, b) => (b[1].puan || 0) - (a[1].puan || 0));
 
             scores.innerHTML = `<div class="scores-grid">
                 ${sorted.map(([site, data]) => {
@@ -692,7 +791,8 @@ Sistem yöneticisinin doktor taleplerini onayladığı, sildiği ve güncelledi�
                 'pending': 'pendingTab',
                 'updates': 'updatesTab',
                 'registered': 'registeredTab',
-                'hospitals': 'hospitalsTab'
+                'hospitals': 'hospitalsTab',
+                'security': 'securityTab'
             };
             document.getElementById(mapping[tab]).classList.add('active');
 
@@ -705,6 +805,10 @@ Sistem yöneticisinin doktor taleplerini onayladığı, sildiği ve güncelledi�
             else if (tab === 'hospitals') {
                 links[4].classList.add('active');
                 renderHospitals();
+            }
+            else if (tab === 'security') {
+                links[5].classList.add('active');
+                loadSecurityData();
             }
         }
 
@@ -1002,8 +1106,200 @@ Sistem yöneticisinin doktor taleplerini onayladığı, sildiği ve güncelledi�
         }
 
         function switchModalTab(tab) {
-            document.querySelectorAll('.modal-tab-btn').forEach(b => b.classList.toggle('active'));
-            document.querySelectorAll('.modal-tab').forEach(t => t.classList.toggle('active'));
+            // Tüm butonlardan active kaldır
+            document.querySelectorAll('#doctorModal .modal-tab-btn').forEach(b => b.classList.remove('active'));
+            // Tüm tab içeriklerini gizle
+            document.querySelectorAll('#doctorModal .modal-tab').forEach(t => t.classList.remove('active'));
+
+            // Tıklanan tab'ı aktif yap
+            document.querySelector(`#doctorModal .modal-tab-btn[data-tab="${tab}"]`).classList.add('active');
+
+            // İlgili içeriği göster
+            const tabMap = {
+                'info': 'modalUserInfo',
+                'scores': 'modalScores',
+                'ai': 'modalAIResults'
+            };
+            document.getElementById(tabMap[tab]).classList.add('active');
+        }
+
+        /**
+         * AI Sonuçlarını render eder - Kullanıcı girdileri ile AI eşleşme detayları
+         */
+        function renderAIResults(doctor) {
+            const container = document.getElementById('modalAIResults');
+            const sitePuanlari = doctor.site_puanlari || {};
+            const siteSonuclari = doctor.site_sonuclari || {};
+            const aiRecommendation = sitePuanlari._ai?._ai_recommendation;
+
+            if (!aiRecommendation && Object.keys(sitePuanlari).length === 0) {
+                container.innerHTML = '<div class="empty-state">⏳ AI analizi henüz tamamlanmadı...</div>';
+                return;
+            }
+
+            // AI Karar Önerisi Kartı
+            let aiDecisionHTML = '';
+            if (aiRecommendation) {
+                const kararIcon = aiRecommendation.karar === 'onayla' ? '🟢' :
+                                  aiRecommendation.karar === 'reddet' ? '🔴' : '🟡';
+                const kararText = aiRecommendation.karar === 'onayla' ? 'ONAYLA' :
+                                  aiRecommendation.karar === 'reddet' ? 'REDDET' : 'İNCELE';
+                const kararClass = aiRecommendation.karar === 'onayla' ? 'ai-decision-approve' :
+                                   aiRecommendation.karar === 'reddet' ? 'ai-decision-reject' : 'ai-decision-review';
+                const guvenColor = aiRecommendation.guven >= 60 ? '#10b981' :
+                                   aiRecommendation.guven >= 30 ? '#f59e0b' : '#ef4444';
+
+                aiDecisionHTML = `
+                    <div class="ai-decision-card ${kararClass}">
+                        <div class="ai-decision-header">
+                            <span class="ai-decision-icon">${kararIcon}</span>
+                            <span class="ai-decision-label">AI Karar Önerisi</span>
+                            <span class="ai-decision-value">${kararText}</span>
+                        </div>
+                        <div class="ai-metrics-grid">
+                            <div class="ai-metric">
+                                <div class="ai-metric-label">Güven Skoru</div>
+                                <div class="ai-metric-value" style="color: ${guvenColor}">${aiRecommendation.guven}%</div>
+                                <div class="ai-metric-bar"><div class="ai-metric-bar-fill" style="width: ${aiRecommendation.guven}%; background: ${guvenColor}"></div></div>
+                            </div>
+                            <div class="ai-metric">
+                                <div class="ai-metric-label">Bayesian Skor</div>
+                                <div class="ai-metric-value">${aiRecommendation.bayesian_skor}</div>
+                                <div class="ai-metric-bar"><div class="ai-metric-bar-fill" style="width: ${aiRecommendation.bayesian_skor}%; background: #6366f1"></div></div>
+                            </div>
+                            <div class="ai-metric">
+                                <div class="ai-metric-label">Bulunma Oranı</div>
+                                <div class="ai-metric-value">${aiRecommendation.bulunma}</div>
+                            </div>
+                            <div class="ai-metric">
+                                <div class="ai-metric-label">Risk Skoru</div>
+                                <div class="ai-metric-value" style="color: ${aiRecommendation.risk_skoru >= 50 ? '#ef4444' : aiRecommendation.risk_skoru >= 25 ? '#f59e0b' : '#10b981'}">${aiRecommendation.risk_skoru}</div>
+                                <div class="ai-metric-bar"><div class="ai-metric-bar-fill" style="width: ${aiRecommendation.risk_skoru}%; background: ${aiRecommendation.risk_skoru >= 50 ? '#ef4444' : aiRecommendation.risk_skoru >= 25 ? '#f59e0b' : '#10b981'}"></div></div>
+                            </div>
+                        </div>
+                        ${aiRecommendation.risk_faktorleri && aiRecommendation.risk_faktorleri.length > 0 ? `
+                            <div class="ai-risk-factors">
+                                <div class="ai-risk-title">⚠️ Risk Faktörleri</div>
+                                ${aiRecommendation.risk_faktorleri.map(f => `<div class="ai-risk-item">• ${f}</div>`).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+
+            // Site Bazlı AI Eşleşme Detayları
+            const siteEntries = Object.entries(sitePuanlari).filter(([key]) => key !== '_ai');
+            let siteMatchHTML = '';
+
+            if (siteEntries.length > 0) {
+                // Kullanıcının girdiği bilgiler
+                const userInput = {
+                    ad: doctor.ad || '-',
+                    soyad: doctor.soyad || '-',
+                    unvan: doctor.unvan || '-',
+                    brans: doctor.brans || '-',
+                    sehir: doctor.sehir || '-',
+                    hastane: doctor.hastane || '-'
+                };
+
+                const fieldLabels = { 'ad': 'Ad', 'soyad': 'Soyad', 'unvan': 'Unvan', 'brans': 'Branş', 'sehir': 'Şehir', 'hastane': 'Hastane' };
+
+                // Puanı yüksekten düşüğe sırala
+                const sortedSites = siteEntries.sort((a, b) => (b[1].puan || 0) - (a[1].puan || 0));
+
+                siteMatchHTML = `
+                    <div class="ai-section-title">🔍 Site Bazlı AI Eşleşme Analizi</div>
+                    <div class="ai-user-input-card">
+                        <div class="ai-user-input-title">📝 Kullanıcının Girdiği Bilgiler</div>
+                        <div class="ai-user-input-grid">
+                            ${Object.entries(fieldLabels).map(([key, label]) => `
+                                <div class="ai-user-input-item">
+                                    <span class="ai-input-label">${label}</span>
+                                    <span class="ai-input-value">${userInput[key]}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div class="ai-sites-list">
+                        ${sortedSites.map(([siteName, siteData]) => {
+                            const puan = siteData.puan || 0;
+                            const aiDetay = siteData.ai_detay || {};
+                            const siteSonuc = siteSonuclari[siteName] || {};
+                            const bulundu = siteSonuc.bulundu !== false && Object.keys(siteSonuc).length > 0;
+                            const puanClass = puan >= 70 ? 'ai-match-high' : puan >= 40 ? 'ai-match-medium' : 'ai-match-low';
+
+                            // Temizleme yardımcısı
+                            const clean = (v) => {
+                                if (!v || v === '-') return '-';
+                                let s = String(v).trim();
+                                if (s.length > 150 || s.includes('{') || s.includes('<script')) return 'Gizlendi';
+                                return s;
+                            };
+
+                            // Her alan için karşılaştırma satırları
+                            let fieldRows = '';
+                            if (bulundu) {
+                                fieldRows = Object.entries(fieldLabels).map(([key, label]) => {
+                                    const girilenVal = userInput[key];
+                                    const bulunanVal = clean(siteSonuc[key] || '-');
+                                    const detayPuan = siteData.detay?.[key] || 0;
+                                    const maxPuan = {ad: 10, soyad: 10, unvan: 20, brans: 20, sehir: 20, hastane: 20}[key];
+                                    const matchIcon = detayPuan >= maxPuan ? '✅' : detayPuan > 0 ? '🔶' : '❌';
+
+                                    // AI benzerlik skorunu al
+                                    let similarityInfo = '';
+                                    const simKey = key === 'ad' || key === 'soyad' ? 'isim_benzerlik' : key + '_benzerlik';
+                                    if (aiDetay[simKey] !== undefined) {
+                                        const simPercent = Math.round(aiDetay[simKey] * 100);
+                                        const simColor = simPercent >= 75 ? '#10b981' : simPercent >= 50 ? '#f59e0b' : '#ef4444';
+                                        similarityInfo = `<span class="ai-similarity-badge" style="color: ${simColor}; border-color: ${simColor}20; background: ${simColor}10">AI: ${simPercent}%</span>`;
+                                    }
+
+                                    return `
+                                        <div class="ai-field-row">
+                                            <span class="ai-field-icon">${matchIcon}</span>
+                                            <span class="ai-field-label">${label}</span>
+                                            <span class="ai-field-input">${girilenVal}</span>
+                                            <span class="ai-field-arrow">→</span>
+                                            <span class="ai-field-found">${bulunanVal}</span>
+                                            <span class="ai-field-score">${detayPuan}/${maxPuan}</span>
+                                            ${similarityInfo}
+                                        </div>
+                                    `;
+                                }).join('');
+                            }
+
+                            return `
+                                <div class="ai-site-card ${puanClass}">
+                                    <div class="ai-site-header">
+                                        <div class="ai-site-name">${siteName}</div>
+                                        <div class="ai-site-score">
+                                            ${bulundu ? `<span class="ai-score-number">${puan}</span><span class="ai-score-total">/100</span>` : '<span class="ai-not-found">Veri Bulunamadı</span>'}
+                                        </div>
+                                    </div>
+                                    ${bulundu ? `
+                                        <div class="ai-site-progress">
+                                            <div class="ai-site-progress-fill" style="width: ${puan}%"></div>
+                                        </div>
+                                        <div class="ai-field-rows">
+                                            ${fieldRows}
+                                        </div>
+                                    ` : `
+                                        <div class="ai-no-data-msg">Bu sitede doktora ait kayıt bulunamadı.</div>
+                                    `}
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+            }
+
+            container.innerHTML = `
+                <div class="ai-results-container">
+                    ${aiDecisionHTML}
+                    ${siteMatchHTML}
+                </div>
+            `;
         }
 
         function logout() { window.location.href = '/api/logout'; }
@@ -1272,6 +1568,174 @@ Sistem yöneticisinin doktor taleplerini onayladığı, sildiği ve güncelledi�
 
         // İlk yükleme
         loadData();
+
+        // =============================================
+        // GÜVENLİK LOGLARI FONKSİYONLARI
+        // =============================================
+
+        /**
+         * Güvenlik istatistiklerini yükler (Dashboard kartı için)
+         */
+        async function loadSecurityStats() {
+            try {
+                const res = await fetch('/api/security-stats');
+                const stats = await res.json();
+                document.getElementById('securityEventCount').textContent = stats.total_events || 0;
+            } catch(err) {
+                console.error('Güvenlik istatistikleri yüklenemedi:', err);
+            }
+        }
+
+        /**
+         * Güvenlik olayları ve denetim kayıtlarını yükler
+         */
+        async function loadSecurityData() {
+            try {
+                const [events, logs, stats] = await Promise.all([
+                    fetch('/api/security-events').then(r => r.json()),
+                    fetch('/api/audit-logs').then(r => r.json()),
+                    fetch('/api/security-stats').then(r => r.json())
+                ]);
+
+                // İstatistik kartlarını güncelle
+                document.getElementById('statFailedLogins').textContent = stats.failed_logins || 0;
+                document.getElementById('statBlockedIPs').textContent = stats.blocked_ips || 0;
+                document.getElementById('statBotsDetected').textContent = stats.bots_detected || 0;
+                document.getElementById('statTotalEvents').textContent = stats.total_events || 0;
+
+                renderSecurityEvents(events);
+                renderAuditLogs(logs);
+            } catch(err) {
+                console.error('Güvenlik verileri yüklenemedi:', err);
+            }
+        }
+
+        /**
+         * Güvenlik olaylarını tabloda gösterir
+         */
+        function renderSecurityEvents(events) {
+            const container = document.getElementById('securityEventsList');
+            if (!events || events.length === 0) {
+                container.innerHTML = '<div class="empty-state">🛡️ Henüz güvenlik olayı yok</div>';
+                return;
+            }
+
+            const eventIcons = {
+                'LOGIN_SUCCESS': '✅',
+                'LOGIN_FAILURE': '❌',
+                'BRUTE_FORCE_LOCK': '🔒',
+                'RATE_LIMITED': '⚠️',
+                'HONEYPOT_TRIGGERED': '🤖',
+                'FORM_SUBMIT': '📝',
+                'LOGOUT': '🚪',
+                'UPDATE_REQUEST': '✏️'
+            };
+
+            const eventColors = {
+                'LOGIN_SUCCESS': 'event-success',
+                'LOGIN_FAILURE': 'event-warning',
+                'BRUTE_FORCE_LOCK': 'event-danger',
+                'RATE_LIMITED': 'event-warning',
+                'HONEYPOT_TRIGGERED': 'event-danger',
+                'FORM_SUBMIT': 'event-info',
+                'LOGOUT': 'event-info',
+                'UPDATE_REQUEST': 'event-info'
+            };
+
+            container.innerHTML = `
+                <table class="security-table">
+                    <thead>
+                        <tr>
+                            <th>Zaman</th>
+                            <th>Olay Tipi</th>
+                            <th>IP Adresi</th>
+                            <th>Detay</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${events.map(e => {
+                            const icon = eventIcons[e.event_type] || '📌';
+                            const colorClass = eventColors[e.event_type] || 'event-info';
+                            const time = e.timestamp ? new Date(e.timestamp).toLocaleString('tr-TR') : '-';
+                            return `
+                                <tr class="${colorClass}">
+                                    <td>${time}</td>
+                                    <td><span class="event-type-badge ${colorClass}">${icon} ${e.event_type}</span></td>
+                                    <td><code>${e.ip || '-'}</code></td>
+                                    <td class="detail-cell">${e.detail || '-'}</td>
+                                </tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>`;
+        }
+
+        /**
+         * Denetim kayıtlarını tabloda gösterir
+         */
+        function renderAuditLogs(logs) {
+            const container = document.getElementById('auditLogsList');
+            if (!logs || logs.length === 0) {
+                container.innerHTML = '<div class="empty-state">📋 Henüz denetim kaydı yok</div>';
+                return;
+            }
+
+            const actionIcons = {
+                'APPROVE_DOCTOR': '✅',
+                'DELETE_DOCTOR': '🗑️',
+                'EDIT_DOCTOR': '✏️',
+                'ADD_DOCTOR_DIRECT': '➕',
+                'APPROVE_UPDATE': '✅',
+                'REJECT_UPDATE': '❌',
+                'PASSWORD_CHANGE': '🔐',
+                'EDIT_HOSPITAL': '🏥',
+                'DELETE_HOSPITAL': '🗑️'
+            };
+
+            container.innerHTML = `
+                <table class="security-table">
+                    <thead>
+                        <tr>
+                            <th>Zaman</th>
+                            <th>İşlem</th>
+                            <th>Kullanıcı</th>
+                            <th>Hedef</th>
+                            <th>Detay</th>
+                            <th>IP</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${logs.map(l => {
+                            const icon = actionIcons[l.action] || '📌';
+                            const time = l.timestamp ? new Date(l.timestamp).toLocaleString('tr-TR') : '-';
+                            return `
+                                <tr>
+                                    <td>${time}</td>
+                                    <td><span class="event-type-badge event-info">${icon} ${l.action}</span></td>
+                                    <td>${l.username || '-'}</td>
+                                    <td>${l.target || '-'}</td>
+                                    <td class="detail-cell">${l.detail || '-'}</td>
+                                    <td><code>${l.ip || '-'}</code></td>
+                                </tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>`;
+        }
+
+        /**
+         * Güvenlik logları sekmesi içindeki alt sekmeler arası geçiş
+         */
+        function switchSecurityTab(tab) {
+            document.querySelectorAll('.security-tab-btn').forEach(b => b.classList.remove('active'));
+            if (tab === 'events') {
+                document.getElementById('securityEventsSection').style.display = 'block';
+                document.getElementById('auditLogsSection').style.display = 'none';
+                document.querySelectorAll('.security-tab-btn')[0].classList.add('active');
+            } else {
+                document.getElementById('securityEventsSection').style.display = 'none';
+                document.getElementById('auditLogsSection').style.display = 'block';
+                document.querySelectorAll('.security-tab-btn')[1].classList.add('active');
+            }
+        }
     </script>
 </body>
 

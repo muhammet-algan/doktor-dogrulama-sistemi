@@ -29,7 +29,6 @@ class IsteBuDoktorScraper(BaseScraper):
                 if len(parts) >= 2:
                     sonuc['ad'] = parts[0]
                     sonuc['soyad'] = ' '.join(parts[1:])
-                # print(f"DEBUG: Bulundu {sonuc['ad']} {sonuc['soyad']}")
             
             # Şehir ve ilçe linkleri - BURSA / NİLÜFER formatında
             sehir_link = soup.select_one('a[href*="/search/"]')

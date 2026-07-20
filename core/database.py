@@ -60,6 +60,40 @@ def init_db():
     )
     ''')
     
+    # --- SİBER GÜVENLİK: Güvenlik olayları tablosu ---
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS security_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ip TEXT,
+        event_type TEXT,
+        detail TEXT,
+        timestamp TEXT
+    )
+    ''')
+    
+    # --- SİBER GÜVENLİK: Admin denetim kayıtları tablosu ---
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS audit_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT,
+        action TEXT,
+        target TEXT,
+        detail TEXT,
+        ip TEXT,
+        timestamp TEXT
+    )
+    ''')
+    
+    # --- YAPAY ZEKA: Site güvenilirlik istatistikleri tablosu ---
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS site_reliability (
+        site_name TEXT PRIMARY KEY,
+        total_checks INTEGER DEFAULT 0,
+        successful_checks INTEGER DEFAULT 0,
+        success_rate REAL DEFAULT 0.5
+    )
+    ''')
+    
     conn.commit()
     conn.close()
 
